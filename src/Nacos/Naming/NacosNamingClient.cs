@@ -12,19 +12,16 @@
     {
         private readonly ILogger _logger;
         private readonly NacosOptions _options;
-        private readonly IHttpClientFactory _clientFactory;
-        private readonly ServerAddressManager _serverAddressManager;
+        private readonly Nacos.Naming.Http.NamingProxy _proxy;
 
         public NacosNamingClient(
             ILoggerFactory loggerFactory
             , IOptionsMonitor<NacosOptions> optionAccs
             , IHttpClientFactory clientFactory)
         {
-            this._logger = loggerFactory.CreateLogger<NacosNamingClient>();
-            this._options = optionAccs.CurrentValue;
-            this._clientFactory = clientFactory;
-
-            this._serverAddressManager = new ServerAddressManager(_options);
+            _logger = loggerFactory.CreateLogger<NacosNamingClient>();
+            _options = optionAccs.CurrentValue;
+            _proxy = new Naming.Http.NamingProxy(loggerFactory, _options, clientFactory);
         }
 
         #region Instance
@@ -34,7 +31,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Post, $"{GetBaseUrl()}{RequestPathValue.INSTANCE}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Post, RequestPathValue.INSTANCE, null, request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -61,7 +58,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Delete, $"{GetBaseUrl()}{RequestPathValue.INSTANCE}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Delete, RequestPathValue.INSTANCE, null , request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -88,7 +85,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Put, $"{GetBaseUrl()}{RequestPathValue.INSTANCE}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Put, RequestPathValue.INSTANCE, null,request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -115,7 +112,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Get, $"{GetBaseUrl()}{RequestPathValue.INSTANCE_LIST}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Get, RequestPathValue.INSTANCE_LIST, null, request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -135,7 +132,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Get, $"{GetBaseUrl()}{RequestPathValue.INSTANCE}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Get, RequestPathValue.INSTANCE, null, request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -155,21 +152,30 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Put, $"{GetBaseUrl()}{RequestPathValue.INSTANCE_BEAT}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Put, RequestPathValue.INSTANCE_BEAT,null, request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
                 case System.Net.HttpStatusCode.OK:
                     var result = await responseMessage.Content.ReadAsStringAsync();
-                    if (result.Equals("ok", StringComparison.OrdinalIgnoreCase))
+                    var jObj = Newtonsoft.Json.Linq.JObject.Parse(result);
+
+                    if (jObj.ContainsKey("code"))
                     {
-                        return true;
+                        int code = int.Parse(jObj["code"].ToString());
+
+                        var flag = code == 10200;
+
+                        if (!flag) _logger.LogWarning($"[client.SendHeartbeat] server return {result} ");
+
+                        return flag;
                     }
                     else
                     {
                         _logger.LogWarning($"[client.SendHeartbeat] server return {result} ");
                         return false;
                     }
+
                 default:
                     _logger.LogWarning($"[client.SendHeartbeat] Send instance beat failed {responseMessage.StatusCode.ToString()}");
                     throw new NacosException((int)responseMessage.StatusCode, $"Send instance beat failed {responseMessage.StatusCode.ToString()}");
@@ -182,7 +188,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Put, $"{GetBaseUrl()}{RequestPathValue.INSTANCE_HEALTH}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Put, RequestPathValue.INSTANCE_HEALTH, null, request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -210,7 +216,7 @@
         #region Metrics
         public async Task<GetMetricsResult> GetMetricsAsync()
         {
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Get, $"{GetBaseUrl()}{RequestPathValue.METRICS}", timeOut: _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Get, RequestPathValue.METRICS, null, new System.Collections.Generic.Dictionary<string, string>(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -232,7 +238,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Post, $"{GetBaseUrl()}{RequestPathValue.SERVICE}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Post, RequestPathValue.SERVICE, null, request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -259,7 +265,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Delete, $"{GetBaseUrl()}{RequestPathValue.SERVICE}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Delete, RequestPathValue.SERVICE, null, request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -286,7 +292,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Put, $"{GetBaseUrl()}{RequestPathValue.SERVICE}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Put, RequestPathValue.SERVICE, null, request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -313,7 +319,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Get, $"{GetBaseUrl()}{RequestPathValue.SERVICE}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Get, RequestPathValue.SERVICE, null, request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -333,7 +339,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Get, $"{GetBaseUrl()}{RequestPathValue.SERVICE_LIST}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Get, RequestPathValue.SERVICE_LIST, null, request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -351,7 +357,7 @@
         #region Switches
         public async Task<GetSwitchesResult> GetSwitchesAsync()
         {
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Get, $"{GetBaseUrl()}{RequestPathValue.SWITCHES}", timeOut: _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Get, RequestPathValue.SWITCHES, null, new System.Collections.Generic.Dictionary<string, string>(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -371,7 +377,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Put, $"{GetBaseUrl()}{RequestPathValue.SWITCHES}", request.ToQueryString());
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Put, RequestPathValue.SWITCHES, null, request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -401,7 +407,7 @@
 
             request.CheckParam();
 
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Get, $"{GetBaseUrl()}{RequestPathValue.SERVERS}", request.ToQueryString(), _options.DefaultTimeOut);
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Get, RequestPathValue.SERVERS, null, request.ToDict(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -417,7 +423,7 @@
 
         public async Task<GetCurrentClusterLeaderResult> GetCurrentClusterLeaderAsync()
         {
-            var responseMessage = await _clientFactory.DoRequestAsync(HttpMethod.Get, $"{GetBaseUrl()}{RequestPathValue.LEADER}");
+            var responseMessage = await _proxy.ReqApiAsync(HttpMethod.Get, RequestPathValue.LEADER, null, new System.Collections.Generic.Dictionary<string, string>(), _options.DefaultTimeOut);
 
             switch (responseMessage.StatusCode)
             {
@@ -432,11 +438,5 @@
             }
         }
         #endregion
-
-        private string GetBaseUrl()
-        {
-            var hostAndPort = _serverAddressManager.GetCurrentServer();
-            return $"http://{hostAndPort}";
-        }
     }
 }

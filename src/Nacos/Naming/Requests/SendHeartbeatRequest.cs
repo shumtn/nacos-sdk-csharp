@@ -1,7 +1,7 @@
 ﻿namespace Nacos
 {
-    using System.Text;
     using Nacos.Utilities;
+    using System.Collections.Generic;
 
     public class SendHeartbeatRequest : BaseRequest
     {
@@ -30,27 +30,35 @@
         /// </summary>
         public bool? Ephemeral { get; set; }
 
+        /// <summary>
+        /// namespace id
+        /// </summary>
+        public string NameSpaceId { get; set; }
+
         public override void CheckParam()
         {
             //return BeatInfo != null && !string.IsNullOrWhiteSpace(ServiceName);
         }
 
-        public override string ToQueryString()
+        public override Dictionary<string, string> ToDict()
         {
-            var sb = new StringBuilder(1024);
-            sb.Append($"beat={Beat}&serviceName={ServiceName}");
-           
-            if (!string.IsNullOrWhiteSpace(GroupName))
+            var dict = new Dictionary<string, string>
             {
-                sb.Append($"&groupName={GroupName}");
-            }
-        
-            if (Ephemeral.HasValue)
-            {
-                sb.Append($"&ephemeral={Ephemeral.Value}");
-            }
+                { "serviceName", ServiceName },
+                { "beat", Beat },
+            };
 
-            return sb.ToString();
+            if (!string.IsNullOrWhiteSpace(NameSpaceId))
+                dict.Add("namespaceId", NameSpaceId);
+
+            if (Ephemeral.HasValue)
+                dict.Add("ephemeral", Ephemeral.Value.ToString());
+
+
+            if (!string.IsNullOrWhiteSpace(GroupName))
+                dict.Add("groupName", GroupName);
+
+            return dict;
         }
     }
 }

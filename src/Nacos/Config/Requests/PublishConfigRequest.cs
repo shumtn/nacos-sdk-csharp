@@ -1,5 +1,6 @@
 ﻿namespace Nacos
 {
+    using System.Collections.Generic;
     using System.Text;
     using Nacos.Utilities;
 
@@ -42,35 +43,31 @@
 
         public override void CheckParam()
         {
-            ParamUtil.CheckParam(DataId, Group, Content);            
+            ParamUtil.CheckParam(DataId, Group, Content);
         }
 
-        public override string ToQueryString()
+        public override Dictionary<string, string> ToDict()
         {
-            var sb = new StringBuilder(2048);
-            sb.Append($"dataId={DataId}&group={Group}&content={Content}");
+            var dict = new Dictionary<string, string>
+            {
+                { "dataId", DataId },
+                { "group", Group },
+                { "content", Content }
+            };
 
             if (!string.IsNullOrWhiteSpace(Tenant))
-            {             
-                sb.Append($"&tenant={Tenant}");
-            }      
+                dict.Add("tenant", Tenant);
 
-            if(!string.IsNullOrWhiteSpace(Type))
-            {
-                sb.Append($"&type={Type}");
-            }
+            if (!string.IsNullOrWhiteSpace(Type))
+                dict.Add("type", Type);
 
             if (!string.IsNullOrWhiteSpace(AppName))
-            {
-                sb.Append($"&appName={AppName}");
-            }
+                dict.Add("appName", AppName);
 
             if (!string.IsNullOrWhiteSpace(Tag))
-            {
-                sb.Append($"&tag={Tag}");
-            }
+                dict.Add("tag", Tag);
 
-            return sb.ToString();
+            return dict;
         }
     }
 }

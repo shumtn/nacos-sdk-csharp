@@ -1,7 +1,7 @@
 ﻿namespace Nacos
 {
-    using System.Text;
     using Nacos.Utilities;
+    using System.Collections.Generic;
 
     public class RemoveConfigRequest : BaseRequest
     {
@@ -25,17 +25,18 @@
             ParamUtil.CheckKeyParam(DataId, Group);
         }
 
-        public override string ToQueryString()
+        public override Dictionary<string, string> ToDict()
         {
-            var sb = new StringBuilder(100);
-            sb.Append($"dataId={DataId}&group={Group}");
+            var dict = new Dictionary<string, string>
+            {
+                { "dataId", DataId },
+                { "group", Group },
+            };
 
             if (!string.IsNullOrWhiteSpace(Tenant))
-            {             
-                sb.Append($"&tenant={Tenant}");
-            }                     
+                dict.Add("tenant", Tenant);
 
-            return sb.ToString();
+            return dict;
         }
     }
 }
